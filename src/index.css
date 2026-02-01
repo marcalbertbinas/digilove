@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@keyframes heartFall {
+  0% {
+    transform: translateY(0) rotate(-5deg) scale(0.9);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(10vh) rotate(-5deg) scale(1);
+  }
+  50% {
+    /* Slight sway to the right */
+    transform: translateY(50vh) rotate(15deg) translateX(30px);
+  }
+  100% {
+    /* Slight sway back to the left */
+    transform: translateY(125vh) rotate(-15deg) translateX(-30px);
+    opacity: 0;
+  }
+}
+
+.animate-falling-heart {
+  animation: heartFall linear infinite;
+  /* Hardware acceleration for smoother movement */
+  will-change: transform;
+}
