@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabaseclient';
-import { Heart, Sparkles, Calendar, MapPin } from 'lucide-react';
+import { Heart, Sparkles, Calendar, MapPin, Loader2 } from 'lucide-react';
 
 const ViewLetter = () => {
   const { id } = useParams();
@@ -13,8 +13,15 @@ const ViewLetter = () => {
 
   useEffect(() => {
     const fetchLetter = async () => {
-      const { data, error } = await supabase.from('Letters').select('*').eq('id', id).single();
+      // Updated to match your new table: 'valentine_messages'
+      const { data, error } = await supabase
+        .from('valentine_messages') 
+        .select('*')
+        .eq('id', id)
+        .single();
+      
       if (data) setLetterData(data);
+      if (error) console.error("Error fetching letter:", error);
       setLoading(false);
     };
     if (id) fetchLetter();
@@ -32,68 +39,47 @@ const ViewLetter = () => {
         <Heart className="w-12 h-12 text-rose-400 animate-ping absolute opacity-20" />
         <Heart className="w-12 h-12 text-rose-500 animate-pulse relative" />
       </div>
-      <p className="mt-4 text-rose-400 font-medium tracking-widest animate-pulse">UNSEALING...</p>
+      <p className="mt-4 text-rose-400 font-medium tracking-widest animate-pulse uppercase">Unsealing Secret Note...</p>
+    </div>
+  );
+
+  if (!letterData) return (
+    <div className="h-screen flex items-center justify-center bg-[#fff5f5] text-rose-500 font-bold">
+      This letter has vanished into the wind... 💨
     </div>
   );
 
   return (
-    <div className="relative min-h-screen bg-[#fff5f5] flex items-center justify-center overflow-hidden p-4">
+    <div className="relative min-h-screen bg-[#fff5f5] flex items-center justify-center overflow-hidden p-4 font-sans">
       
-      {/* Animated Gradient Mesh Background */}
+      {/* Background Decor */}
       <div className="absolute inset-0 z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-rose-200 rounded-full blur-[120px] opacity-50 animate-pulse" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-200 rounded-full blur-[120px] opacity-50 animate-pulse delay-700" />
       </div>
 
-      {/* Floating Memories (Images) */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        {!isRejected && letterData?.images?.map((url, i) => (
-          <div
-            key={i}
-            className="absolute animate-float shadow-2xl border-[6px] border-white overflow-hidden bg-white"
-            style={{
-              left: `${(i * 25) + 5}%`,
-              width: '140px',
-              height: '160px',
-              animationDuration: `${6 + i}s`,
-              animationDelay: `${i * 0.5}s`,
-              top: '110%',
-              transform: `rotate(${i % 2 === 0 ? 5 : -5}deg)`,
-              boxShadow: '0 10px 30px -10px rgba(0,0,0,0.2)'
-            }}
-          >
-            <img src={url} className="w-full h-[80%] object-cover" alt="us" />
-            <div className="h-[20%] flex items-center justify-center">
-              <Heart className="w-3 h-3 text-rose-300 fill-rose-300" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* The Letter Card */}
       <div className="relative z-10 w-full max-w-lg">
-        {/* Top Decorative Wax Seal or Icon */}
+        {/* Wax Seal Icon */}
         <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20 bg-rose-500 w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
           <Sparkles className="text-white w-6 h-6" />
         </div>
 
-        <div className="bg-white/70 backdrop-blur-xl p-8 md:p-12 rounded-[2.5rem] shadow-[0_20px_50px_rgba(255,182,193,0.4)] border border-white/50 text-center relative overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-xl p-8 md:p-12 rounded-[2.5rem] shadow-[0_20px_50px_rgba(255,182,193,0.3)] border border-white/50 text-center relative overflow-hidden">
           
-          {/* Content */}
           <header className="mb-6">
-            <span className="text-xs font-bold text-rose-400 uppercase tracking-[0.2em]">Private Message</span>
+            <span className="text-xs font-bold text-rose-400 uppercase tracking-[0.2em]">Secret Admirer Message</span>
             <h1 className="text-4xl font-serif font-bold text-rose-900 mt-2">
-              {isAccepted ? "It's a Date! ✨" : isRejected ? "Oh, My Heart... 🥺" : `For ${letterData.recipient}`}
+              {isAccepted ? "Yay! ❤️" : isRejected ? "Oh no... 🥺" : `For ${letterData.recipient_name}`}
             </h1>
           </header>
 
-          <div className="relative py-6">
+          <div className="relative py-4">
             <p className="text-rose-800 text-xl leading-relaxed font-serif italic">
               {isAccepted 
-                ? "You've just made this Valentine's Day the most special one yet. I can't wait to see your smile! ❤️" 
+                ? "You just made my whole year! I can't wait to see you soon. ❤️" 
                 : isRejected 
-                ? "Aray ko! My heart just did a little backflip of sadness... are you really sure?" 
-                : `"${letterData.messages}"`}
+                ? "My heart just broke a little... are you sure? 🥺" 
+                : `"${letterData.content}"`}
             </p>
           </div>
 
@@ -101,7 +87,7 @@ const ViewLetter = () => {
             <div className="mt-8 space-y-6">
               <div className="flex flex-col items-center gap-2 text-rose-400">
                 <Heart className="w-5 h-5 fill-rose-400 animate-bounce" />
-                <h2 className="text-xl font-medium tracking-tight">Will you be my Valentine?</h2>
+                <h2 className="text-xl font-medium tracking-tight text-rose-600">Will you be my Valentine?</h2>
               </div>
               
               <div className="flex flex-wrap justify-center items-center gap-4 relative h-16">
@@ -131,7 +117,7 @@ const ViewLetter = () => {
               <div className="flex items-center justify-center gap-4 text-rose-600 font-medium">
                 <div className="flex items-center gap-1"><Calendar className="w-4 h-4" /> Feb 14</div>
                 <div className="w-1 h-1 bg-rose-300 rounded-full" />
-                <div className="flex items-center gap-1"><MapPin className="w-4 h-4" /> Secret Location</div>
+                <div className="flex items-center gap-1"><MapPin className="w-4 h-4" /> To be decided...</div>
               </div>
             </div>
           )}
@@ -141,28 +127,19 @@ const ViewLetter = () => {
               onClick={() => {setIsRejected(false); setNoButtonPos({x:0, y:0})}}
               className="mt-6 text-rose-400 text-sm font-medium underline underline-offset-4 hover:text-rose-600 transition-colors"
             >
-              Wait, I clicked by mistake! Take me back 🥺
+              Wait, I clicked by mistake! 🥺
             </button>
           )}
 
           <footer className="mt-12 pt-6 border-t border-rose-100/50">
-            <p className="text-rose-300 italic">Always yours,</p>
-            <p className="text-2xl font-serif font-bold text-rose-700">{letterData.sender}</p>
+            <p className="text-rose-300 italic">With love,</p>
+            {/* The Big Reveal: We only show the nickname if they've interacted or if you want it visible always */}
+            <p className="text-2xl font-serif font-bold text-rose-700">
+               {letterData.sender_nickname || "Your Secret Admirer"}
+            </p>
           </footer>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { transform: translateY(-120vh) rotate(20deg); opacity: 0; }
-        }
-        .animate-float {
-          animation: float linear infinite;
-        }
-      `}</style>
     </div>
   );
 };
