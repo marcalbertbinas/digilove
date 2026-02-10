@@ -1,147 +1,190 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../supabaseclient';
-import { Heart, Sparkles, Calendar, MapPin, Loader2 } from 'lucide-react';
+import { supabase } from '../supabaseclient.js';
+import Header from '../components/Header';
+import { Sparkles, Heart, Send, Check, X, Loader2, PartyPopper } from 'lucide-react';
 
-const ViewLetter = () => {
-  const { id } = useParams();
-  const [letterData, setLetterData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isRejected, setIsRejected] = useState(false);
-  const [isAccepted, setIsAccepted] = useState(false);
-  const [noButtonPos, setNoButtonPos] = useState({ x: 0, y: 0 });
+function LetterView() {
+    const { id } = useParams();
+    const [letter, setLetter] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [sourceTable, setSourceTable] = useState('');
+    const [replyText, setReplyText] = useState('');
+    const [isSending, setIsSending] = useState(false);
+    const [showCustomReply, setShowCustomReply] = useState(false);
+    const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
-  useEffect(() => {
     const fetchLetter = async () => {
-      // Updated to match your new table: 'valentine_messages'
-      const { data, error } = await supabase
-        .from('valentine_messages') 
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (data) setLetterData(data);
-      if (error) console.error("Error fetching letter:", error);
-      setLoading(false);
+        try {
+            // Check both tables for the message
+            let { data, error: firstError } = await supabase.from('Letters').select('*').eq('id', id).single();
+            
+            if (!firstError && data) {
+                setLetter({ ...data, display_text: data.messages });
+                setSourceTable('Letters');
+            } else {
+                let { data: secondData, error: secondError } = await supabase.from('valentine_messages').select('*').eq('id', id).single();
+                if (secondError) throw secondError;
+                setLetter({ ...secondData, display_text: secondData.content });
+                setSourceTable('valentine_messages');
+            }
+        } catch (err) {
+            setError("This letter hasn't arrived yet.");
+        } finally {
+            setLoading(false);
+        }
     };
-    if (id) fetchLetter();
-  }, [id]);
 
-  const moveNoButton = () => {
-    const x = Math.random() * 250 - 125;
-    const y = Math.random() * 150 - 75;
-    setNoButtonPos({ x, y });
-  };
+    useEffect(() => { fetchLetter(); }, [id]);
 
-  if (loading) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-[#fff5f5]">
-      <div className="relative">
-        <Heart className="w-12 h-12 text-rose-400 animate-ping absolute opacity-20" />
-        <Heart className="w-12 h-12 text-rose-500 animate-pulse relative" />
-      </div>
-      <p className="mt-4 text-rose-400 font-medium tracking-widest animate-pulse uppercase">Unsealing Secret Note...</p>
-    </div>
-  );
+    const handleQuickResponse = async (isYes) => {
+        const responseText = isYes ? "Yes, I'd love to! ❤️" : "No 💔";
+        await submitReply(responseText, isYes);
+    };
 
-  if (!letterData) return (
-    <div className="h-screen flex items-center justify-center bg-[#fff5f5] text-rose-500 font-bold">
-      This letter has vanished into the wind... 💨
-    </div>
-  );
+    const submitReply = async (text, isAccepted) => {
+        setIsSending(true);
+        try {
+            // Update the columns we added to your table
+            const { error } = await supabase
+                .from(sourceTable)
+                .update({ 
+                    reply_message: text,
+                    accepted: isAccepted 
+                })
+                .eq('id', id);
 
-  return (
-    <div className="relative min-h-screen bg-[#fff5f5] flex items-center justify-center overflow-hidden p-4 font-sans">
-      
-      {/* Background Decor */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-rose-200 rounded-full blur-[120px] opacity-50 animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-200 rounded-full blur-[120px] opacity-50 animate-pulse delay-700" />
-      </div>
+            if (error) throw error;
+            
+            // Show the "Sent" alert
+            setShowSuccessAlert(true);
+            
+            // Re-fetch data to update UI
+            await fetchLetter(); 
 
-      <div className="relative z-10 w-full max-w-lg">
-        {/* Wax Seal Icon */}
-        <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20 bg-rose-500 w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
-          <Sparkles className="text-white w-6 h-6" />
+            // Hide alert after 3 seconds
+            setTimeout(() => setShowSuccessAlert(false), 3000);
+            
+        } catch (err) {
+            alert("Failed to send your reply.");
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    if (loading) return (
+        <div className="min-h-screen bg-[#fff1f2] flex items-center justify-center">
+            <Heart className="text-[#ff2d55] animate-pulse" size={50} fill="currentColor" />
         </div>
+    );
 
-        <div className="bg-white/80 backdrop-blur-xl p-8 md:p-12 rounded-[2.5rem] shadow-[0_20px_50px_rgba(255,182,193,0.3)] border border-white/50 text-center relative overflow-hidden">
-          
-          <header className="mb-6">
-            <span className="text-xs font-bold text-rose-400 uppercase tracking-[0.2em]">Secret Admirer Message</span>
-            <h1 className="text-4xl font-serif font-bold text-rose-900 mt-2">
-              {isAccepted ? "Yay! ❤️" : isRejected ? "Oh no... 🥺" : `For ${letterData.recipient_name}`}
-            </h1>
-          </header>
+    return (
+        <div className="min-h-screen w-full bg-[#fff1f2] flex flex-col items-center justify-center p-6 font-sans relative">
+            <Header />
 
-          <div className="relative py-4">
-            <p className="text-rose-800 text-xl leading-relaxed font-serif italic">
-              {isAccepted 
-                ? "You just made my whole year! I can't wait to see you soon. ❤️" 
-                : isRejected 
-                ? "My heart just broke a little... are you sure? 🥺" 
-                : `"${letterData.content}"`}
-            </p>
-          </div>
+            {/* Floating Success Alert */}
+            {showSuccessAlert && (
+                <div className="fixed top-10 left-1/2 -translate-x-1/2 z-50 bg-[#ff2d55] text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-10 duration-500">
+                    <PartyPopper size={20} />
+                    <span className="font-bold tracking-wide">Reply Sent Successfully!</span>
+                </div>
+            )}
+            
+            <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-xl p-10 text-center relative mt-10 border border-white/20">
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-[#ff2d55] rounded-full flex items-center justify-center text-white shadow-lg border-4 border-[#fff1f2]">
+                    <Sparkles size={20} fill="currentColor" />
+                </div>
 
-          {!isAccepted && !isRejected && (
-            <div className="mt-8 space-y-6">
-              <div className="flex flex-col items-center gap-2 text-rose-400">
-                <Heart className="w-5 h-5 fill-rose-400 animate-bounce" />
-                <h2 className="text-xl font-medium tracking-tight text-rose-600">Will you be my Valentine?</h2>
-              </div>
-              
-              <div className="flex flex-wrap justify-center items-center gap-4 relative h-16">
-                <button 
-                  onClick={() => setIsAccepted(true)}
-                  className="px-10 py-3.5 bg-rose-500 hover:bg-rose-600 text-white rounded-full font-bold text-lg shadow-xl shadow-rose-200 transition-all hover:scale-110 active:scale-95 z-20"
-                >
-                  Yes, I'd love to!
-                </button>
+                <div className="space-y-6">
+                    <p className="text-[#ff7da0] font-bold uppercase text-[10px] tracking-[0.2em]">Secret Message</p>
+                    <h1 className="text-4xl font-black text-[#8b1d31]">For {letter?.recipient_name}</h1>
+                    <div className="text-xl text-[#8b1d31] italic py-4">"{letter?.display_text}"</div>
 
-                <button 
-                  onMouseEnter={moveNoButton}
-                  onClick={moveNoButton}
-                  style={{ 
-                    transform: `translate(${noButtonPos.x}px, ${noButtonPos.y}px)`,
-                  }}
-                  className="px-8 py-3 bg-white text-rose-300 border border-rose-100 rounded-full font-semibold transition-all duration-200 z-10"
-                >
-                  No
-                </button>
-              </div>
+                    <div className="pt-6 border-t border-[#fff5f6]">
+                        {!letter?.reply_message ? (
+                            <div className="space-y-6">
+                                <p className="font-bold text-[#ff2d55] text-lg italic">Will you be my Valentine?</p>
+                                
+                                {!showCustomReply ? (
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex gap-4 justify-center">
+                                            <button 
+                                                disabled={isSending}
+                                                onClick={() => handleQuickResponse(true)}
+                                                className="flex-1 bg-[#ff2d55] text-white py-4 rounded-full font-bold shadow-lg hover:bg-[#e6294d] transition-all active:scale-95 text-sm flex items-center justify-center gap-2 disabled:opacity-70"
+                                            >
+                                                {isSending ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />} Yes, I'd love to!
+                                            </button>
+                                            <button 
+                                                disabled={isSending}
+                                                onClick={() => handleQuickResponse(false)}
+                                                className="flex-1 bg-white text-[#ccc] border border-[#eee] py-4 rounded-full font-bold hover:bg-gray-50 transition-all text-sm flex items-center justify-center gap-2"
+                                            >
+                                                <X size={18} /> No
+                                            </button>
+                                        </div>
+                                        <button 
+                                            disabled={isSending}
+                                            onClick={() => setShowCustomReply(true)}
+                                            className="text-[#ff7da0] text-sm font-bold underline decoration-2 underline-offset-4 hover:text-[#ff2d55]"
+                                        >
+                                            Or write a message back
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300">
+                                        <textarea 
+                                            className="w-full p-4 rounded-2xl bg-[#fff8f9] border border-[#ffdee3] text-[#8b1d31] focus:outline-none focus:ring-2 focus:ring-[#ff7da0] transition-all resize-none italic"
+                                            placeholder="Type your response here..."
+                                            rows="3"
+                                            value={replyText}
+                                            onChange={(e) => setReplyText(e.target.value)}
+                                        />
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => setShowCustomReply(false)}
+                                                className="bg-white text-[#8b1d31] border border-[#ffdee3] px-6 py-4 rounded-full font-bold text-sm"
+                                            >
+                                                Back
+                                            </button>
+                                            <button 
+                                                onClick={() => submitReply(replyText, true)}
+                                                disabled={isSending || !replyText.trim()}
+                                                className="flex-1 bg-[#ff2d55] text-white py-4 rounded-full font-bold shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                                            >
+                                                {isSending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />} Send
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            /* THE SUCCESS STATE: This is how they know for sure it sent */
+                            <div className="bg-[#fff8f9] p-8 rounded-[2rem] text-center border-2 border-[#ffdee3] shadow-inner animate-in zoom-in-95 duration-700">
+                                <div className="flex justify-center mb-2">
+                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                                        <Check size={24} strokeWidth={3} />
+                                    </div>
+                                </div>
+                                <p className="text-[#ff7da0] text-xs font-bold uppercase tracking-widest mb-2">Message Sent!</p>
+                                <p className="text-xl font-black text-[#ff2d55] italic uppercase tracking-tight leading-tight">
+                                    "{letter.reply_message}"
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="pt-6">
+                        <p className="text-[#ff7da0] text-[10px] uppercase font-bold tracking-widest mb-1">With love,</p>
+                        <p className="text-2xl font-black text-[#8b1d31]">
+                            {letter?.sender_nickname || letter?.sender || "Secret Admirer"}
+                        </p>
+                    </div>
+                </div>
             </div>
-          )}
-
-          {isAccepted && (
-            <div className="mt-8 p-6 bg-rose-50/50 rounded-2xl border border-rose-100 animate-in zoom-in duration-500">
-              <div className="flex items-center justify-center gap-4 text-rose-600 font-medium">
-                <div className="flex items-center gap-1"><Calendar className="w-4 h-4" /> Feb 14</div>
-                <div className="w-1 h-1 bg-rose-300 rounded-full" />
-                <div className="flex items-center gap-1"><MapPin className="w-4 h-4" /> To be decided...</div>
-              </div>
-            </div>
-          )}
-
-          {isRejected && (
-            <button 
-              onClick={() => {setIsRejected(false); setNoButtonPos({x:0, y:0})}}
-              className="mt-6 text-rose-400 text-sm font-medium underline underline-offset-4 hover:text-rose-600 transition-colors"
-            >
-              Wait, I clicked by mistake! 🥺
-            </button>
-          )}
-
-          <footer className="mt-12 pt-6 border-t border-rose-100/50">
-            <p className="text-rose-300 italic">With love,</p>
-            {/* The Big Reveal: We only show the nickname if they've interacted or if you want it visible always */}
-            <p className="text-2xl font-serif font-bold text-rose-700">
-               {letterData.sender_nickname || "Your Secret Admirer"}
-            </p>
-          </footer>
         </div>
-      </div>
-    </div>
-  );
-};
+    );
+}
 
-export default ViewLetter;
+export default LetterView;
