@@ -40,7 +40,7 @@ serve(async (req) => {
       });
     } 
     
-    // CASE B: Sending a REPLY (From ViewLetter)
+    // CASE B: Sending a REPLY (Updated to support both tables)
     else {
       const { letterId, replyMessage } = body;
       const supabase = createClient(
@@ -48,13 +48,32 @@ serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       );
 
-      const { data: letter } = await supabase
+      // 1. Try finding the letter in 'valentine_messages' (Anonymous)
+      let { data: letter } = await supabase
         .from('valentine_messages')
         .select('sender_email, recipient_name')
         .eq('id', letterId)
-        .single();
+        .maybeSingle();
 
-      if (!letter?.sender_email) throw new Error("Sender email not found");
+      // 2. If not found, try finding it in 'Letters' (Full Letter)
+      if (!letter) {
+        const { data: fullLetter } = await supabase
+          .from('Letters')
+          .select('sender_email, recipient')
+          .eq('id', letterId)
+          .maybeSingle();
+        
+        if (fullLetter) {
+          letter = {
+            sender_email: fullLetter.sender_email,
+            recipient_name: fullLetter.recipient // Map 'recipient' to 'recipient_name' for the email template below
+          };
+        }
+      }
+
+      if (!letter?.sender_email) {
+        throw new Error("Sender email not found in either table");
+      }
 
       console.log("Sending Reply to:", letter.sender_email);
       await transporter.sendMail({
