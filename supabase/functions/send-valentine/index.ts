@@ -12,52 +12,63 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers })
 
   try {
-    const { letterId, replyMessage } = await req.json()
-    console.log(`Processing reply for ID: ${letterId}`)
-    
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
+    const body = await req.json();
+    const GMAIL_USER = Deno.env.get('GMAIL_USER');
+    const GMAIL_PASS = Deno.env.get('GMAIL_PASS');
 
-    // 1. Fetch data
-    const { data: letter, error: dbError } = await supabase
-      .from('valentine_messages')
-      .select('sender_email, recipient_name')
-      .eq('id', letterId)
-      .single()
-
-    if (dbError || !letter?.sender_email) {
-      console.error("DB Error:", dbError?.message)
-      throw new Error("No sender email found in database.")
-    }
-
-    // 2. Setup Transporter with your Secrets
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
       secure: true,
-      auth: {
-        user: Deno.env.get('GMAIL_USER'),
-        pass: Deno.env.get('GMAIL_PASS'),
-      },
+      auth: { user: GMAIL_USER, pass: GMAIL_PASS },
     });
 
-    // 3. Send Email
-    console.log("Sending email to:", letter.sender_email)
-    await transporter.sendMail({
-      from: `"Valentine App" <${Deno.env.get('GMAIL_USER')}>`,
-      to: letter.sender_email,
-      subject: `❤️ ${letter.recipient_name} just replied!`,
-      text: `They said: ${replyMessage}`,
-      html: `<b>${letter.recipient_name}</b> said: <i>"${replyMessage}"</i>`
-    });
+    // CASE A: Sending a NEW Valentine (From CreateAnonymous)
+    if (body.type === 'VALENTINE') {
+      console.log("Sending New Valentine to:", body.recipientEmail);
+      await transporter.sendMail({
+        from: `"DigiLove" <${GMAIL_USER}>`,
+        to: body.recipientEmail,
+        subject: `💌 Someone sent you a secret Valentine!`,
+        html: `
+          <div style="font-family: sans-serif; text-align: center; border: 1px solid #ff2d55; padding: 20px; border-radius: 20px;">
+            <h1 style="color: #ff2d55;">You have a Secret Message!</h1>
+            <p><b>${body.senderNickname}</b> has left a heart-felt note for you.</p>
+            <a href="${body.valentineLink}" style="background: #ff2d55; color: white; padding: 12px 25px; text-decoration: none; border-radius: 50px; font-weight: bold; display: inline-block; margin: 20px 0;">Open Your Letter ❤️</a>
+          </div>
+        `
+      });
+    } 
+    
+    // CASE B: Sending a REPLY (From ViewLetter)
+    else {
+      const { letterId, replyMessage } = body;
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
 
-    console.log("Email sent successfully!")
-    return new Response(JSON.stringify({ success: true }), { headers, status: 200 })
+      const { data: letter } = await supabase
+        .from('valentine_messages')
+        .select('sender_email, recipient_name')
+        .eq('id', letterId)
+        .single();
+
+      if (!letter?.sender_email) throw new Error("Sender email not found");
+
+      console.log("Sending Reply to:", letter.sender_email);
+      await transporter.sendMail({
+        from: `"DigiLove" <${GMAIL_USER}>`,
+        to: letter.sender_email,
+        subject: `❤️ ${letter.recipient_name} replied to your Valentine!`,
+        text: `Message: ${replyMessage}`,
+      });
+    }
+
+    return new Response(JSON.stringify({ success: true }), { headers, status: 200 });
 
   } catch (error) {
-    console.error("CRITICAL ERROR:", error.message)
-    return new Response(JSON.stringify({ error: error.message }), { headers, status: 500 })
+    console.error("SERVER ERROR:", error.message);
+    return new Response(JSON.stringify({ error: error.message }), { headers, status: 500 });
   }
 })
