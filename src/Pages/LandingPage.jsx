@@ -47,7 +47,7 @@ function LandingPage() {
         <div className="min-h-screen w-full bg-rose-50 flex flex-col relative overflow-hidden font-sans">
             
             {/* Background Decorative Icons */}
-            <div className="absolute top-20 left-10 text-rose-200/40 rotate-12 select-none pointer-events-none">
+            <div className="absolute top-[100px] left-10 text-rose-200/40 rotate-12 select-none pointer-events-none">
                 <Heart size={120} fill="currentColor" />
             </div>
             <div className="absolute bottom-10 right-10 text-rose-200/30 -rotate-12 select-none pointer-events-none">
@@ -108,8 +108,50 @@ function LandingPage() {
                         </span>
                     </button>
                 </div>
+
+                {/* --- HOW IT WORKS SECTION --- */}
+                <div className="mt-24 w-full max-w-5xl mx-auto px-4">
+                    <h2 className="text-3xl md:text-4xl font-black text-rose-900 mb-12">
+                        How to share the love 💌
+                    </h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+                        {/* Step 1 */}
+                        <div className="bg-white/60 backdrop-blur-sm p-8 rounded-[2.5rem] border-2 border-rose-100 flex flex-col items-center text-center group hover:border-rose-300 transition-all shadow-sm">
+                            <div className="w-16 h-16 bg-rose-500 text-white rounded-2xl flex items-center justify-center mb-6 rotate-3 group-hover:rotate-6 transition-transform shadow-lg shadow-rose-200">
+                                <Sparkles size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-rose-900 mb-3">1. Create</h3>
+                            <p className="text-rose-700/70 text-sm leading-relaxed">
+                                Pick a letter type, choose your theme, and write a heartfelt message for that special someone.
+                            </p>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div className="bg-white/60 backdrop-blur-sm p-8 rounded-[2.5rem] border-2 border-rose-100 flex flex-col items-center text-center group hover:border-rose-300 transition-all shadow-sm md:mt-8">
+                            <div className="w-16 h-16 bg-rose-400 text-white rounded-2xl flex items-center justify-center mb-6 -rotate-3 group-hover:-rotate-6 transition-transform shadow-lg shadow-rose-200">
+                                <Mail size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-rose-900 mb-3">2. Generate</h3>
+                            <p className="text-rose-700/70 text-sm leading-relaxed">
+                                We'll generate a unique, private link. No accounts or logins required for you or the receiver.
+                            </p>
+                        </div>
+
+                        {/* Step 3 */}
+                        <div className="bg-white/60 backdrop-blur-sm p-8 rounded-[2.5rem] border-2 border-rose-100 flex flex-col items-center text-center group hover:border-rose-300 transition-all shadow-sm">
+                            <div className="w-16 h-16 bg-rose-600 text-white rounded-2xl flex items-center justify-center mb-6 rotate-3 group-hover:rotate-12 transition-transform shadow-lg shadow-rose-200">
+                                <Send size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-rose-900 mb-3">3. Send</h3>
+                            <p className="text-rose-700/70 text-sm leading-relaxed">
+                                Share the link! They’ll be greeted by an interactive, digital experience they can keep forever.
+                            </p>
+                        </div>
+                    </div>
+                </div>
                 
-                <p className="mt-8 text-rose-400 text-sm font-medium flex items-center gap-2">
+                <p className="mt-16 text-rose-400 text-sm font-medium flex items-center gap-2">
                     <MessageSquareHeart size={16} /> Fast, secure, and 100% digital.
                 </p>
             </main>
